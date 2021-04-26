@@ -1,5 +1,5 @@
 //===============================================================================
-// MKR_ItemSelectCategory.js
+// MKR_ItemSelectCategory_MZ.js
 //===============================================================================
 // Copyright (c) 2021 マンカインド
 // This software is released under the MIT License.
@@ -26,7 +26,7 @@
  * @target MZ
  *
  * @help = アイテム選択カテゴリ設定プラグイン =
- * MKR_ItemSelectCategory.js
+ * MKR_ItemSelectCategory_MZ.js
  *
  *
  * [アイテム選択の処理]イベントコマンドで"武器"や"防具"を選択可能にします。
