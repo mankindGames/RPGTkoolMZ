@@ -6,6 +6,9 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // Version
+// 2.2.0 2024/02/06 ・表示するアイテムの対象として
+//                    武器/防具のタイプを指定できるように改修。
+//
 // 2.1.0 2021/12/30 ・RPGツクールMZのプラグインコマンド方式に対応
 //
 // 2.0.0 2021/04/26 ・RPGツクールMZに対応。
@@ -22,7 +25,7 @@
 
 /*:
  * ============================================================================
- * @plugindesc (v2.1.0) アイテム選択カテゴリ設定プラグイン
+ * @plugindesc (v2.2.0) アイテム選択カテゴリ設定プラグイン
  * @author マンカインド
  * @url https://raw.githubusercontent.com/mankindGames/RPGTkoolMZ/master/MKR_ItemSelectCategory_MZ.js
  *
@@ -45,9 +48,23 @@
  *         "防具"     : カテゴリを"防具"に変更します。
  *         "アイテム" : カテゴリを"アイテム"に設定します。(元々のカテゴリ)
  *
- *   ・アイテム選択ウィンドウが閉じられると、アイテムカテゴリは
- *     プラグインパラメータ[初期アイテムカテゴリ]で選択したものに
- *     変更されます。
+ *       タイプ1:
+ *         カテゴリが"武器"、又は"防具"を選択時のみ効果を発揮します。
+ *         カテゴリが"武器"の場合は、更に表示する"武器タイプ"を選択できます。
+ *         カテゴリが"防具"の場合は、更に表示する"防具タイプ"を選択できます。
+ *         0 を指定した場合は全て対象とします。
+ *
+ *       タイプ2:
+ *         カテゴリ"防具"を選択時のみ効果を発揮します。
+ *         更に表示する"装備タイプ"を選択できます。
+ *         0 を指定した場合は全て対象とします。
+ *
+ * ○○タイプは、ツクールエディターの[データベース]画面左の[タイプ]を
+ * 選択することで確認・設定できます。
+ *
+ * アイテム選択ウィンドウが閉じられると、アイテムカテゴリは
+ * プラグインパラメータ[初期アイテムカテゴリ]で選択したものに
+ * 変更されます。
  *
  *
  * スクリプトコマンド:
@@ -97,6 +114,7 @@
  * @value keyItem
  * @default item
  *
+ *
  * @command category_change
  * @text カテゴリ変更
  * @desc 「アイテム選択の処理」で選択可能なアイテムのカテゴリを変更します。
@@ -112,6 +130,22 @@
  *      @value weapon
  * @option 防具
  *      @value armor
+ *
+ * @arg type1
+ * @text タイプ1
+ * @desc 武器の"武器タイプ"番号、又は防具の"防具タイプ"番号を設定します。0の場合は全て対象となります。
+ * @default 0
+ * @type number
+ * @min 0
+ * @decimals 0
+ *
+ * @arg type2
+ * @text タイプ2
+ * @desc 防具の"装備タイプ"番号を設定します。0の場合は全て対象となります。
+ * @default 0
+ * @type number
+ * @min 0
+ * @decimals 0
  *
 */
 
@@ -139,6 +173,8 @@
     //=========================================================================
     PluginManager.registerCommand(pluginName, "category_change", args => {
         $gameMessage.setItemChoiceCategory(args.category);
+        $gameMessage.setItemChoiceType1(parseInt(args.type1));
+        $gameMessage.setItemChoiceType2(parseInt(args.type2));
     });
 
 
@@ -151,6 +187,8 @@
     Game_Message.prototype.clear = function() {
         _Game_Message_clear.call(this);
         this.setItemChoiceCategory(settings.initItemCategory);
+        this.setItemChoiceType1(0);
+        this.setItemChoiceType2(0);
     };
 
     Game_Message.prototype.itemChoiceCategory = function() {
@@ -161,6 +199,21 @@
         this._itemChoiceCategory = category;
     };
 
+    Game_Message.prototype.itemChoiceType1 = function() {
+        return this._itemChoiceType1;
+    };
+
+    Game_Message.prototype.setItemChoiceType1 = function(type) {
+        this._itemChoiceType1 = type;
+    };
+
+    Game_Message.prototype.itemChoiceType2 = function() {
+        return this._itemChoiceType2;
+    };
+
+    Game_Message.prototype.setItemChoiceType2 = function(type) {
+        this._itemChoiceType2 = type;
+    };
 
     //=========================================================================
     // Window_EventItem
@@ -169,13 +222,41 @@
     //=========================================================================
     const _Window_EventItem_includes = Window_EventItem.prototype.includes;
     Window_EventItem.prototype.includes = function(item) {
+        let result = true;
         switch($gameMessage.itemChoiceCategory()) {
-            case 'armor':
-                return DataManager.isArmor(item);
-            case 'weapon':
-                return DataManager.isWeapon(item);
-            default:
+            case 'armor': {
+                if(!DataManager.isArmor(item)) {
+                    return false;
+                }
+
+                const type1 = $gameMessage.itemChoiceType1();
+                const type2 = $gameMessage.itemChoiceType2();
+
+                if(result && type1) {
+                    result = item.atypeId === type1;
+                }
+                if(result && type2) {
+                    result = item.etypeId === type2;
+                }
+
+                return result;
+            }
+            case 'weapon': {
+                if(!DataManager.isWeapon(item)) {
+                    return false;
+                }
+
+                const type1 = $gameMessage.itemChoiceType1();
+
+                if(result && type1) {
+                    result = item.wtypeId === type1;
+                }
+
+                return result;
+            }
+            default: {
                 return _Window_EventItem_includes.call(this, item);
+            }
         }
     };
 
